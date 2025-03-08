@@ -1,0 +1,83 @@
+POST /auth/register
+Content-Type: application/json
+
+{
+  "username": "newuser123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "password": "securePassword123",
+  "polLean": "M"
+}
+response 
+{
+  "success": true,
+  "message": "Registration successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "username": "newuser123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "polLean": "M"
+  }
+}
+error response if field is missing
+{
+  "success": false,
+  "message": "Please provide all required fields: username, firstName, lastName, email, password, and political leaning"
+}
+error response if political leaning is invalid
+{
+  "success": false,
+  "message": "Invalid political leaning. Must be one of: FL, L, SL, M, SR, R, FR"
+}
+error response if no token provided
+{
+  "success": false,
+  "message": "No token provided"
+}
+
+POST /auth/login
+Content-Type: application/json
+
+
+{
+  "username": "newuser123",
+  "password": "securePassword123"
+}
+response
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "username": "newuser123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "polLean": "M",
+    "accVerify": 0
+  }
+}
+error response if credentials missing
+{
+  "success": false,
+  "message": "Please provide username and password"
+}
+error response if invalid credentials
+{
+  "success": false,
+  "message": "Invalid credentials"
+}
+error response if server error
+{
+  "success": false,
+  "message": "Login failed"
+}
+
+
+
+
+
+

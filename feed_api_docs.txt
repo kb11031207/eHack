@@ -1,0 +1,352 @@
+# Feed API Documentation
+
+## Overview
+
+The Feed API provides endpoints for creating and interacting with posts and comments, including:
+- Creating posts
+- Retrieving posts with various sorting options
+- Adding and retrieving comments
+- Adding and removing likes
+
+## Authentication
+
+Most write operations require authentication. Include the JWT token in the Authorization header: 
+
+
+## Endpoints
+
+### Create a New Post
+
+**Endpoint:** `POST /feed/posts`
+
+**Authentication:** Required
+
+**Request Body:**
+
+
+json
+{
+"title": "Example Post Title",
+"body": "This is the main content of the post.",
+"sources": "https://example.com, https://anothersite.org"
+}
+
+**Successful Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Post created successfully",
+  "postID": 123
+}
+```
+
+**Error Responses:**
+- 400 Bad Request: Missing required fields
+- 401 Unauthorized: No token provided or invalid token
+- 500 Internal Server Error: Server error
+
+### Get All Posts
+
+**Endpoint:** `GET /feed/posts`
+
+**Authentication:** Not required
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `limit`: Number of posts per page (default: 10)
+- `sortBy`: Sorting method (options: recent, balanced, controversial, right, left, moderate)
+
+**Successful Response (200 OK):**
+```json
+{
+  "success": true,
+  "currentPage": 1,
+  "totalPages": 5,
+  "totalPosts": 42,
+  "postsPerPage": 10,
+  "sortBy": "recent",
+  "posts": [
+    {
+      "postID": 123,
+      "title": "Example Post Title",
+      "body": "This is the main content of the post.",
+      "sources": "https://example.com, https://anothersite.org",
+      "datePosted": "2023-05-15T14:30:45.000Z",
+      "username": "user123",
+      "firstName": "John",
+      "lastName": "Doe",
+      "polLean": "M",
+      "commentCount": 5,
+      "likes": {
+        "FL": 2,
+        "L": 3,
+        "SL": 5,
+        "M": 10,
+        "SR": 4,
+        "R": 2,
+        "FR": 1
+      },
+      "totalLikes": 27,
+      "rightLikes": 7,
+      "leftLikes": 10,
+      "moderateLikes": 10,
+      "polarizationScore": 3
+    }
+  ]
+}
+```
+
+**Error Response:**
+- 500 Internal Server Error: Server error
+
+### Get a Single Post
+
+**Endpoint:** `GET /feed/posts/:id`
+
+**Authentication:** Not required
+
+**URL Parameters:**
+- `id`: Post ID
+
+**Successful Response (200 OK):**
+```json
+{
+  "success": true,
+  "post": {
+    "postID": 123,
+    "title": "Example Post Title",
+    "body": "This is the main content of the post.",
+    "sources": "https://example.com, https://anothersite.org",
+    "datePosted": "2023-05-15T14:30:45.000Z",
+    "username": "user123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "polLean": "M",
+    "likes": {
+      "FL": 2,
+      "L": 3,
+      "SL": 5,
+      "M": 10,
+      "SR": 4,
+      "R": 2,
+      "FR": 1
+    },
+    "comments": [
+      {
+        "commentID": 456,
+        "body": "This is a comment on the post.",
+        "datePosted": "2023-05-15T15:30:45.000Z",
+        "parentCommentID": null,
+        "username": "commenter1",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "polLean": "L",
+        "likes": {
+          "FL": 1,
+          "L": 2,
+          "SL": 1,
+          "M": 3,
+          "SR": 0,
+          "R": 0,
+          "FR": 0
+        }
+      }
+    ]
+  }
+}
+```
+
+**Error Responses:**
+- 404 Not Found: Post not found
+- 500 Internal Server Error: Server error
+
+### Get Comments for a Post
+
+**Endpoint:** `GET /feed/posts/:postID/comments`
+
+**Authentication:** Not required
+
+**URL Parameters:**
+- `postID`: Post ID
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `limit`: Number of comments per page (default: 20)
+- `sortBy`: Sorting method (options: recent, controversial, balanced, oldest)
+- `parentID`: ID of parent comment for nested replies (default: null for top-level comments)
+
+**Successful Response (200 OK):**
+```json
+{
+  "success": true,
+  "currentPage": 1,
+  "totalPages": 2,
+  "totalComments": 25,
+  "commentsPerPage": 20,
+  "sortBy": "recent",
+  "parentCommentID": null,
+  "comments": [
+    {
+      "commentID": 456,
+      "postID": 123,
+      "body": "This is a comment on the post.",
+      "datePosted": "2023-05-15T15:30:45.000Z",
+      "parentCommentID": null,
+      "username": "commenter1",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "polLean": "L",
+      "replyCount": 3,
+      "likes": {
+        "FL": 1,
+        "L": 2,
+        "SL": 1,
+        "M": 3,
+        "SR": 0,
+        "R": 0,
+        "FR": 0
+      },
+      "totalLikes": 7
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- 404 Not Found: Post not found
+- 500 Internal Server Error: Server error
+
+### Add a Comment
+
+**Endpoint:** `POST /feed/comments`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "postID": 123,
+  "body": "This is a new comment.",
+  "parentCommentID": null
+}
+```
+
+**Note:** For replies to existing comments, include `parentCommentID` instead of `postID`.
+
+**Successful Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Comment added successfully",
+  "commentID": 456
+}
+```
+
+**Error Responses:**
+- 400 Bad Request: Missing required fields
+- 401 Unauthorized: No token provided or invalid token
+- 500 Internal Server Error: Server error
+
+### Add a Like
+
+**Endpoint:** `POST /feed/likes`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "entityType": "POST",
+  "entityID": 123
+}
+```
+
+**Note:** `entityType` can be either "POST" or "COMMENT"
+
+**Successful Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Like added successfully",
+  "likes": {
+    "FL": 2,
+    "L": 3,
+    "SL": 5,
+    "M": 11,
+    "SR": 4,
+    "R": 2,
+    "FR": 1
+  }
+}
+```
+
+**Error Responses:**
+- 400 Bad Request: Invalid entity type
+- 401 Unauthorized: No token provided or invalid token
+- 404 Not Found: Entity not found or user not found
+- 409 Conflict: Already liked
+- 500 Internal Server Error: Server error
+
+### Remove a Like
+
+**Endpoint:** `DELETE /feed/likes`
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "entityType": "POST",
+  "entityID": 123
+}
+```
+
+**Successful Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Like removed successfully",
+  "likes": {
+    "FL": 2,
+    "L": 3,
+    "SL": 5,
+    "M": 9,
+    "SR": 4,
+    "R": 2,
+    "FR": 1
+  }
+}
+```
+
+**Error Responses:**
+- 400 Bad Request: Invalid entity type
+- 401 Unauthorized: No token provided or invalid token
+- 404 Not Found: Like not found
+- 500 Internal Server Error: Server error
+
+## Political Leaning Values
+
+The API uses the following codes for political leanings:
+- `FL`: Far Left
+- `L`: Left
+- `SL`: Slightly Left
+- `M`: Middle
+- `SR`: Slightly Right
+- `R`: Right
+- `FR`: Far Right
+
+## Sorting Options
+
+### For Posts:
+- `recent`: Sort by most recent posts (default)
+- `balanced`: Sort by how balanced the post is (smallest difference between right and left leaning likes)
+- `controversial`: Sort by total engagement (most likes)
+- `right`: Sort by most right-leaning likes
+- `left`: Sort by most left-leaning likes
+- `moderate`: Sort by most moderate likes
+
+### For Comments:
+- `recent`: Sort by most recent comments (default)
+- `controversial`: Sort by total engagement (most likes)
+- `balanced`: Sort by how balanced the comment is
+- `oldest`: Sort by oldest first
