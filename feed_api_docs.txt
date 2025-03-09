@@ -1,8 +1,11 @@
 # Feed API Documentation
 
 ## Overview
-
+every opration here requires  Include the JWT token in the Authorization header: 
+as 'x-auth-token'
 The Feed API provides endpoints for creating and interacting with posts and comments, including:
+
+
 - Creating posts
 - Retrieving posts with various sorting options
 - Adding and retrieving comments
@@ -11,6 +14,7 @@ The Feed API provides endpoints for creating and interacting with posts and comm
 ## Authentication
 
 Most write operations require authentication. Include the JWT token in the Authorization header: 
+as 'x-auth-token'
 
 
 ## Endpoints
@@ -257,7 +261,9 @@ json
 ```json
 {
   "entityType": "POST",
-  "entityID": 123
+  "entityID": 123,
+  "username" : "keb",
+  "userPolLean"
 }
 ```
 

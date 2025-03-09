@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+const dotenv = require('dotenv');
+dotenv.config();
+
 /**
  * Create a new post
  * 
@@ -79,6 +82,7 @@ exports.getPosts = async (req, res) => {
         const offset = (page - 1) * limit;
 
         let orderClause = '';
+        //check if anytin
         
         // Determine the sorting method
         switch (sortBy) {
@@ -140,7 +144,7 @@ exports.getPosts = async (req, res) => {
                 u.lastName,
                 u.polLean,
                 (SELECT COUNT(*) FROM Comments WHERE postID = p.postID) AS commentCount
-            FROM PostsData p
+            FROM Postsdata p
             JOIN Users u ON p.username = u.username
             ORDER BY ${orderClause}
             LIMIT ? OFFSET ?
@@ -211,6 +215,9 @@ exports.getPosts = async (req, res) => {
 exports.getPostById = async (req, res) => {
     try {
         const postID = req.params.id;
+        console.log(req.body.postID);
+        console.log(postID);
+        console.log("hrere");
 
         // Get post with user information
         const [posts] = await db.query(`
@@ -232,7 +239,8 @@ exports.getPostById = async (req, res) => {
         if (posts.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Post not found'
+                message: 'Post not found',
+                postid : postID
             });
         }
 
@@ -261,7 +269,7 @@ exports.getPostById = async (req, res) => {
         // Get comments for the post
         const [comments] = await db.query(`
             SELECT 
-                c.commentID, 
+                c.entityID, 
                 c.body, 
                 c.datePosted,
                 c.parentCommentID,
@@ -271,7 +279,7 @@ exports.getPostById = async (req, res) => {
                 u.polLean
             FROM Comments c
             JOIN Users u ON c.username = u.username
-            WHERE c.postID = ?
+            WHERE c.entityID = ?
             ORDER BY c.datePosted ASC
         `, [postID]);
 
@@ -346,10 +354,14 @@ exports.addComment = async (req, res) => {
             });
         }
 
+        // Determine entityType based on provided IDs
+        const entityType = 'POST' ;
+        const entityID = postID || parentCommentID;
+
         // Call the stored procedure to insert comment
         const [result] = await db.query(
             'CALL insertComment(?, ?, ?, ?)',
-            [postID || null, username, parentCommentID || null, body]
+            [entityType, entityID, username, body]
         );
 
         // Check if comment was created successfully
@@ -384,8 +396,8 @@ exports.addComment = async (req, res) => {
 /**
  * Get comments for a post with pagination and sorting
  * 
- * @route GET /feed/posts/:postID/comments
- * @param {string} req.params.postID - Post ID
+ * @route GET /feed/posts/comments
+ * @param {string} req.query.id - Post ID
  * @param {number} [req.query.page=1] - Page number
  * @param {number} [req.query.limit=20] - Number of comments per page
  * @param {string} [req.query.sortBy=recent] - Sorting method (recent, controversial, balanced, oldest)
@@ -396,11 +408,19 @@ exports.addComment = async (req, res) => {
  */
 exports.getComments = async (req, res) => {
     try {
-        const postID = req.params.postID;
+        const postID = req.query.id;
+        
+        if (!postID) {
+            return res.status(400).json({
+                success: false,
+                message: 'Post ID is required'
+            });
+        }
+        
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
-        const sortBy = req.query.sortBy || 'recent'; // Default sort by recency
-        const parentCommentID = req.query.parentID || null; // For nested comments
+        const sortBy = req.query.sortBy || 'recent';
+        const parentCommentID = req.query.parentID || null;
         const offset = (page - 1) * limit;
 
         // Check if post exists
@@ -409,7 +429,8 @@ exports.getComments = async (req, res) => {
         if (posts.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Post not found'
+                message: 'Post not found',
+                postid: postID
             });
         }
 
@@ -418,14 +439,12 @@ exports.getComments = async (req, res) => {
         // Determine the sorting method
         switch (sortBy) {
             case 'controversial':
-                // Sort by total likes (most engagement)
                 orderClause = `
                     (SELECT COUNT(*) FROM Likes WHERE entityType = 'COMMENT' AND entityID = c.commentID) DESC, 
                     c.datePosted DESC
                 `;
                 break;
             case 'balanced':
-                // Sort by how balanced the comment is
                 orderClause = `
                     ABS(
                         (SELECT COUNT(*) FROM Likes WHERE entityType = 'COMMENT' AND entityID = c.commentID AND polLean IN ('FR', 'R', 'SR')) - 
@@ -435,42 +454,40 @@ exports.getComments = async (req, res) => {
                 `;
                 break;
             case 'oldest':
-                // Sort by oldest first
                 orderClause = 'c.datePosted ASC';
                 break;
             case 'recent':
             default:
-                // Sort by most recent
                 orderClause = 'c.datePosted DESC';
                 break;
         }
 
         // Build the query based on whether we're getting top-level or nested comments
-        let whereClause = 'c.postID = ?';
-        let queryParams = [postID];
+        let whereClause = '';
+        let queryParams = [];
         
         if (parentCommentID === null) {
-            // Get top-level comments (no parent)
-            whereClause += ' AND c.parentCommentID IS NULL';
+            // Get comments for a post (entityType = 'POST')
+            whereClause = "c.entityType = 'POST' AND c.entityID = ?";
+            queryParams = [postID];
         } else {
-            // Get replies to a specific comment
-            whereClause += ' AND c.parentCommentID = ?';
-            queryParams.push(parentCommentID);
+            // Get replies to a comment (entityType = 'COMMENT')
+            whereClause = "c.entityType = 'COMMENT' AND c.entityID = ?";
+            queryParams = [parentCommentID];
         }
 
         // Get comments
         const [comments] = await db.query(`
             SELECT 
                 c.commentID, 
-                c.postID,
+                c.entityID,
+                c.entityType,
                 c.body, 
                 c.datePosted,
-                c.parentCommentID,
                 u.username,
                 u.firstName,
                 u.lastName,
-                u.polLean,
-                (SELECT COUNT(*) FROM Comments WHERE parentCommentID = c.commentID) AS replyCount
+                u.polLean
             FROM Comments c
             JOIN Users u ON c.username = u.username
             WHERE ${whereClause}
@@ -501,11 +518,20 @@ exports.getComments = async (req, res) => {
             
             // Calculate total likes
             comment.totalLikes = Object.values(comment.likes).reduce((sum, count) => sum + count, 0);
+            
+            // Get reply count for this comment
+            const [replyCount] = await db.query(`
+                SELECT COUNT(*) as count
+                FROM Comments
+                WHERE entityType = 'COMMENT' AND entityID = ?
+            `, [comment.commentID]);
+            
+            comment.replyCount = replyCount[0].count;
         }
 
         // Get total count of comments for this query
         const [countResult] = await db.query(
-            `SELECT COUNT(*) as total FROM Comments WHERE ${whereClause}`, 
+            `SELECT COUNT(*) as total FROM Comments WHERE ${whereClause.replace(/c\./g, '')}`, 
             queryParams
         );
         
@@ -720,4 +746,4 @@ exports.removeLike = async (req, res) => {
     }
 };
 
-module.exports = exports; 
+module.exports = exports;

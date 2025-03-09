@@ -43,7 +43,7 @@ Content-Type: application/json
 
 
 {
-  "username": "newuser123",
+  "email: "newuser123",
   "password": "securePassword123"
 }
 response

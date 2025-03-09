@@ -89,7 +89,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
     const { username, password } = req.body;
-
+    console.log(username + " " + password);
     // Validate input
     if (!username || !password) {
         return res.status(400).json({
@@ -126,7 +126,9 @@ exports.login = async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { username: user.username },
+            { email: user.email,
+                username: user.username
+             },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );

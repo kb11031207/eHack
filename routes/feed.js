@@ -9,11 +9,11 @@ router.post('/posts', auth, feedController.createPost);
 // Get all posts with pagination and sorting (public)
 router.get('/posts', feedController.getPosts);
 
+// Get comments for a post (public)
+router.get('/posts/comments', feedController.getComments);
+
 // Get a single post by ID (public)
 router.get('/posts/:id', feedController.getPostById);
-
-// Get comments for a post (public)
-router.get('/posts/:postID/comments', feedController.getComments);
 
 // Add a comment to a post (requires auth)
 router.post('/comments', auth, feedController.addComment);
